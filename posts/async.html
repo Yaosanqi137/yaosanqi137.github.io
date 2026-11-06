@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="从事件循环到微任务，厘清宏任务、微任务与 Promise 的协作方式。" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <title>深入理解 JavaScript 异步模型 - 爱特未来</title>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="/index.html">
+        <span class="brand-logo">爱</span>
+        <span>爱特未来</span>
+      </a>
+      <nav class="nav-links">
+        <a href="/index.html">首页</a>
+        <a href="/about.html">关于</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="article">
+    <a class="back" href="/index.html">← 返回首页</a>
+    <h1>深入理解 JavaScript 异步模型</h1>
+    <p class="sub">2026-10-28 · JavaScript · 8 分钟</p>
+
+    <p>JavaScript 是单线程的，却能处理海量并发请求。这背后的核心是<strong>事件循环（Event Loop）</strong>。很多异步“坑”都源于对宏任务、微任务、Promise 协作方式理解不清。这篇文章把这套机制一次讲透。</p>
+
+    <h2>事件循环是唯一的“调度器”</h2>
+    <p>浏览器把可执行的代码分成两类：</p>
+    <ul>
+      <li><strong>宏任务（macrotask）</strong>：<code>setTimeout</code>、<code>setInterval</code>、I/O、UI 渲染等。</li>
+      <li><strong>微任务（microtask）</strong>：<code>Promise.then</code>、<code>queueMicrotask</code>、<code>MutationObserver</code>。</li>
+    </ul>
+    <p>事件循环的每一步：<strong>执行一个宏任务 → 清空所有微任务 → 渲染 → 再执行下一个宏任务</strong>。</p>
+
+    <h2>一段经典代码</h2>
+    <pre><code>console.log('1');
+
+setTimeout(() =&gt; console.log('2'), 0);
+
+Promise.resolve()
+  .then(() =&gt; console.log('3'))
+  .then(() =&gt; console.log('4'));
+
+console.log('5');</code></pre>
+    <p>输出顺序：<code>1 5 3 4 2</code>。</p>
+    <p>原因：<code>console.log</code> 是同步代码，先执行；两个 <code>Promise.then</code> 是微任务，必须在下一个宏任务（<code>setTimeout</code>）之前清空；所以 <code>3</code>、<code>4</code> 在 <code>2</code> 之前。</p>
+
+    <h2>为什么微任务优先？</h2>
+    <p>微任务代表“数据已经准备好了”的状态，比如 Promise 的结算。如果让宏任务（如定时器）插队，UI 状态就会撕裂。所以引擎规定：<strong>微任务必须在当前宏任务结束后、渲染之前全部清空</strong>。</p>
+    <blockquote>一句话：宏任务决定“何时做”，微任务决定“紧接着做什么”。</blockquote>
+
+    <h2>常见误区</h2>
+    <h3>1. setTimeout(0) 不是立刻执行</h3>
+    <p>它只是把回调排进下一个宏任务队列，期间微任务会先跑完。</p>
+    <h3>2. async/await 是语法糖</h3>
+    <p><code>await</code> 之后的代码本质是一个微任务，所以它比 <code>setTimeout</code> 更快执行。</p>
+    <h3>3. 死循环会卡死 UI</h3>
+    <p>事件循环只在宏任务之间才检查渲染。一个同步死循环会让整个页面冻结，必须靠 <code>setTimeout</code> 或 <code>requestAnimationFrame</code> 让出控制权。</p>
+
+    <h2>小结</h2>
+    <ul>
+      <li>事件循环 = 宏任务队列 + 微任务队列 + 渲染时机。</li>
+      <li>微任务永远优先于下一个宏任务。</li>
+      <li>理解这套模型，异步竞态、状态更新顺序就不再神秘。</li>
+    </ul>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div>© 2026 爱特未来 · 个人博客，仅供技术分享与转载</div>
+      <div class="beian">
+        <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2025389882号-2</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
