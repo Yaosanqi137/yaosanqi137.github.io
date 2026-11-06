@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="装饰器本质是高阶函数，带你从手写日志、缓存到并发控制，逐步掌握它。" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <title>Python 装饰器：从入门到实践 - 爱特未来</title>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="/index.html">
+        <span class="brand-logo">爱</span>
+        <span>爱特未来</span>
+      </a>
+      <nav class="nav-links">
+        <a href="/index.html">首页</a>
+        <a href="/about.html">关于</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="article">
+    <a class="back" href="/index.html">← 返回首页</a>
+    <h1>Python 装饰器：从入门到实践</h1>
+    <p class="sub">2026-09-30 · Python · 7 分钟</p>
+
+    <p>装饰器看起来像魔法，其实就一句话：<strong>它接收一个函数，返回一个新函数，并把原函数替换掉</strong>。Python 里函数是一等公民，这成了可能。</p>
+
+    <h2>最小装饰器</h2>
+    <pre><code>import functools
+
+def log(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        print(f'call {fn.__name__}')
+        return fn(*args, **kwargs)
+    return wrapper
+
+@log
+def hello():
+    print('hi')
+
+hello()</code></pre>
+    <p><code>@log</code> 等价于 <code>hello = log(hello)</code>。<code>functools.wraps</code> 保留原函数名和 docstring，调试时不会丢信息。</p>
+
+    <h2>带参数的装饰器</h2>
+    <p>需要参数时，要再包一层：</p>
+    <pre><code>def retry(times=3):
+    def deco(fn):
+        @functools.wraps(fn)
+        def wrapper(*a, **k):
+            for i in range(times):
+                try:
+                    return fn(*a, **k)
+                except Exception:
+                    if i == times - 1:
+                        raise
+        return wrapper
+    return deco</code></pre>
+
+    <h2>类装饰器</h2>
+    <p>需要状态时，用类实现更清晰：</p>
+    <pre><code>class Cache:
+    def __init__(self, fn):
+        self.fn = fn
+        self.store = {}
+    def __call__(self, *args):
+        if args not in self.store:
+            self.store[args] = self.fn(*args)
+        return self.store[args]</code></pre>
+
+    <h2>装饰器叠加顺序</h2>
+    <p>多个装饰器自下而上应用，最靠近函数的先执行。理解这一点，<code>@property</code>、<code>@classmethod</code> 叠加就不会写错。</p>
+
+    <h2>小结</h2>
+    <ul>
+      <li>装饰器 = 高阶函数 + 函数替换。</li>
+      <li>带参数要三层嵌套。</li>
+      <li>状态用类装饰器管理。</li>
+      <li>叠加顺序：自下而上。</li>
+    </ul>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div>© 2026 爱特未来 · 个人博客，仅供技术分享与转载</div>
+      <div class="beian">
+        <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2025389882号-2</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

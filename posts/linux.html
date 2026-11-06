@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="进程、线程、fork 与线程同步，用一张图把操作系统里的并发讲明白。" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <title>Linux 进程与线程：一次讲透 - 爱特未来</title>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="/index.html">
+        <span class="brand-logo">爱</span>
+        <span>爱特未来</span>
+      </a>
+      <nav class="nav-links">
+        <a href="/index.html">首页</a>
+        <a href="/about.html">关于</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="article">
+    <a class="back" href="/index.html">← 返回首页</a>
+    <h1>Linux 进程与线程：一次讲透</h1>
+    <p class="sub">2026-10-15 · Linux · 10 分钟</p>
+
+    <p>操作系统里的“并发”听起来玄，其实就两样东西：<strong>进程</strong>和<strong>线程</strong>。进程是资源分配的单元，线程是 CPU 调度的单元。把这两者分清楚，剩下的都是细节。</p>
+
+    <h2>进程：独立的地址空间</h2>
+    <p>每个进程都有自己的虚拟地址空间、文件描述符、堆栈。进程之间默认<strong>不能直接访问对方的内存</strong>，必须通过 IPC（管道、共享内存、消息队列）通信。</p>
+
+    <h2>线程：共享一切，除了栈</h2>
+    <p>同一进程内的线程共享代码段、数据段、堆、文件描述符，只有<strong>栈、寄存器、线程局部存储</strong>是独立的。</p>
+    <table>
+      <thead><tr><th>属性</th><th>进程</th><th>线程</th></tr></thead>
+      <tbody>
+        <tr><td>地址空间</td><td>独立</td><td>共享</td></tr>
+        <tr><td>创建开销</td><td>大（fork）</td><td>小（clone）</td></tr>
+        <tr><td>崩溃影响</td><td>互不影响</td><td>全进程结束</td></tr>
+        <tr><td>切换成本</td><td>刷 TLB、换页表</td><td>仅换栈指针</td></tr>
+      </tbody>
+    </table>
+
+    <h2>fork 到底做了什么</h2>
+    <pre><code>int pid = fork();
+if (pid &lt; 0) {
+    // 创建失败
+} else if (pid == 0) {
+    // 子进程
+} else {
+    // 父进程，pid 是子进程 PID
+}</code></pre>
+    <p>现代 Linux 用 <strong>COW（Copy-On-Write）</strong>：fork 后父子共享物理页，谁修改谁才真正复制。所以 fork 几乎不拷贝数据，非常快。</p>
+
+    <h2>线程同步：互斥与条件变量</h2>
+    <p>线程共享数据，必然竞争。最基础的工具是 <strong>互斥锁（mutex）</strong>和<strong>条件变量（condvar）</strong>：</p>
+    <pre><code>pthread_mutex_lock(&amp;m);
+  // 临界区：读写共享变量
+pthread_mutex_unlock(&amp;m);</code></pre>
+    <p>死锁是经典陷阱：两个线程各持一把锁等对方。解决思路是<strong>固定加锁顺序</strong>，或改用 <code>trylock</code> + 回退。</p>
+
+    <h2>调度：CFS 公平队列</h2>
+    <p>Linux 默认调度器是 <strong>CFS（完全公平调度）</strong>，它用红黑树维护“最小虚拟运行时间”的进程，每次把该进程调度到空闲 CPU 上。优先级（nice）影响的是“被调度的频率”，而不是独占。</p>
+
+    <h2>小结</h2>
+    <ul>
+      <li>进程隔离、线程共享，是并发的根本分界。</li>
+      <li>fork + COW 让进程创建极廉价。</li>
+      <li>同步靠锁和条件变量，死锁靠加锁顺序规避。</li>
+      <li>CFS 按虚拟时间公平分配 CPU。</li>
+    </ul>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div>© 2026 爱特未来 · 个人博客，仅供技术分享与转载</div>
+      <div class="beian">
+        <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2025389882号-2</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
